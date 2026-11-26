@@ -35,15 +35,10 @@ export const diffContains = async (cwd, text, paths) => {
   )
 }
 
-export const tagContains = async (cwd, tagName, commit) => {
-  const { exitCode, stderr } = await git(
-    cwd,
-    ['merge-base', '--is-ancestor', commit, tagName],
-    { ignoreReturnCode: true }
+export const releaseCommitExists = async (cwd, number) =>
+  lines((await git(cwd, ['log', '--format=%s'])).stdout).some((subject) =>
+    new RegExp(`^Release \\S+ for #${number}$`).test(subject)
   )
-  if (exitCode > 1) throw new Error(`git merge-base failed: ${stderr.trim()}`)
-  return exitCode === 0
-}
 
 export const commitFiles = async (cwd, message, paths, { name, email }) => {
   await git(cwd, ['add', '--', ...paths])

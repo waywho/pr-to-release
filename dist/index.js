@@ -62708,15 +62708,10 @@ const diffContains = async (cwd, text, paths) => {
   )
 };
 
-const tagContains = async (cwd, tagName, commit) => {
-  const { exitCode, stderr } = await git(
-    cwd,
-    ['merge-base', '--is-ancestor', commit, tagName],
-    { ignoreReturnCode: true }
+const releaseCommitExists = async (cwd, number) =>
+  lines((await git(cwd, ['log', '--format=%s'])).stdout).some((subject) =>
+    new RegExp(`^Release \\S+ for #${number}$`).test(subject)
   );
-  if (exitCode > 1) throw new Error(`git merge-base failed: ${stderr.trim()}`)
-  return exitCode === 0
-};
 
 const commitFiles = async (cwd, message, paths, { name, email }) => {
   await git(cwd, ['add', '--', ...paths]);
@@ -62804,13 +62799,9 @@ async function run() {
 
     const tagPrefix = getInput('tag-prefix');
     const current = currentVersion(await listTags(cwd), tagPrefix);
-    const currentTag = `${tagPrefix}${current}`;
-    if (
-      current !== '0.0.0' &&
-      (await tagContains(cwd, currentTag, pullRequest.merge_commit_sha))
-    ) {
+    if (await releaseCommitExists(cwd, pullRequest.number)) {
       info(
-        `Pull request #${pullRequest.number} is already in ${currentTag}. Nothing to do.`
+        `Pull request #${pullRequest.number} is already released. Nothing to do.`
       );
       setOutput('released', 'false');
       return
@@ -62859,7 +62850,7 @@ async function run() {
     const tagName = `${tagPrefix}${next}`;
     await commitFiles(
       cwd,
-      `Release ${tagName}`,
+      `Release ${tagName} for #${pullRequest.number}`,
       [changelogPath, ...versionFiles],
       author
     );

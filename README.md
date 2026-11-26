@@ -48,16 +48,19 @@ With a release label:
 
 1. The action finds the current version. This is the highest tag
    `<prefix>X.Y.Z`. It is `0.0.0` if no tag exists.
-1. The action stops if the current tag already contains the merge commit of the
-   pull request. A re-run of a released pull request does nothing.
+1. The action stops if the branch has a release commit for the pull request. A
+   re-run of a released pull request does nothing. A pull request that an
+   earlier release already contains still gets its own release. For example, two
+   pull requests merge in the same minute, and the first release takes in the
+   code of both.
 1. The action runs `version-command`, if you set it.
 1. If you set `version-command`, the action checks that the files it changed
    contain the next version. If not, the action stops before any commit.
 1. The action moves `[Unreleased]` and the entries of the pull request into
    `## [<next>] - <YYYY-MM-DD>`. The date is in UTC.
 1. The action updates the comparison links at the bottom of the file.
-1. The action commits `Release <tag>`, creates the tag and pushes. For example,
-   `Release v1.3.0`.
+1. The action commits `Release <tag> for #<number>`, creates the tag and pushes.
+   For example, `Release v1.3.0 for #7`.
 1. The action creates a GitHub Release. The body is the new changelog section.
 
 A rejected push fails the action. The action then creates no release.
