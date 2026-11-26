@@ -13,9 +13,9 @@ import {
   diffContains,
   listTags,
   push,
+  releaseCommitExists,
   syncWithRemote,
-  tag,
-  tagContains
+  tag
 } from './github/git.js'
 
 export async function run() {
@@ -79,13 +79,9 @@ export async function run() {
 
     const tagPrefix = core.getInput('tag-prefix')
     const current = currentVersion(await listTags(cwd), tagPrefix)
-    const currentTag = `${tagPrefix}${current}`
-    if (
-      current !== '0.0.0' &&
-      (await tagContains(cwd, currentTag, pullRequest.merge_commit_sha))
-    ) {
+    if (await releaseCommitExists(cwd, pullRequest.number)) {
       core.info(
-        `Pull request #${pullRequest.number} is already in ${currentTag}. Nothing to do.`
+        `Pull request #${pullRequest.number} is already released. Nothing to do.`
       )
       core.setOutput('released', 'false')
       return
@@ -134,7 +130,7 @@ export async function run() {
     const tagName = `${tagPrefix}${next}`
     await commitFiles(
       cwd,
-      `Release ${tagName}`,
+      `Release ${tagName} for #${pullRequest.number}`,
       [changelogPath, ...versionFiles],
       author
     )

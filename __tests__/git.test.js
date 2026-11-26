@@ -8,9 +8,9 @@ import {
   diffContains,
   listTags,
   push,
+  releaseCommitExists,
   syncWithRemote,
-  tag,
-  tagContains
+  tag
 } from '../src/github/git.js'
 
 const identity = ['-c', 'user.name=Setup', '-c', 'user.email=setup@example.com']
@@ -98,26 +98,18 @@ test('diffContains ignores a matching line in a file outside the paths', async (
   expect(await diffContains(work, '0.2.0', ['version.rb'])).toBe(false)
 })
 
-test('tagContains is true when the tag contains the commit', async () => {
-  const commit = git(work, 'rev-parse', 'HEAD')
-  git(work, ...identity, 'tag', 'v0.1.0')
+test('releaseCommitExists is true when a release commit names the pull request', async () => {
+  commitFile(work, 'CHANGELOG.md', '0.2.0\n', 'Release v0.2.0 for #7')
+  commitFile(work, 'other.txt', 'later\n', 'Later commit')
 
-  expect(await tagContains(work, 'v0.1.0', commit)).toBe(true)
+  expect(await releaseCommitExists(work, 7)).toBe(true)
 })
 
-test('tagContains is false when the commit is newer than the tag', async () => {
-  git(work, ...identity, 'tag', 'v0.1.0')
-  commitFile(work, 'later.txt', 'later\n', 'Later commit')
+test('releaseCommitExists is false for another pull request or a merge commit', async () => {
+  commitFile(work, 'CHANGELOG.md', '0.2.0\n', 'Release v0.2.0 for #70')
+  commitFile(work, 'other.txt', 'merged\n', 'Rename the column (#7)')
 
-  expect(
-    await tagContains(work, 'v0.1.0', git(work, 'rev-parse', 'HEAD'))
-  ).toBe(false)
-})
-
-test('tagContains throws when the commit is unknown', async () => {
-  git(work, ...identity, 'tag', 'v0.1.0')
-
-  await expect(tagContains(work, 'v0.1.0', 'f'.repeat(40))).rejects.toThrow()
+  expect(await releaseCommitExists(work, 7)).toBe(false)
 })
 
 test('a rejected push leaves no tag on the remote', async () => {
